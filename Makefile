@@ -1,6 +1,6 @@
-net-test-y += net_test.o phy.o emac_hw.o
+net-y += emac.o phy.o emac_hw.o
 
-obj-m += net-test.o
+obj-m += net.o
 
 all:
 	make -C $(KSRC) M=$(PWD) modules
