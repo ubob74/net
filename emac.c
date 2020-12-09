@@ -145,22 +145,26 @@ static int emac_hw_setup(void)
 
 static void dump_skb(struct sk_buff *skb, const char *title)
 {
+#if 0
 	int i;
 
 	pr_err("%s\n", title);
 	for (i = 0; i < 45; i++)
 		pr_cont("%.2x ", skb->data[i]);
 	pr_cont("\n");
+#endif
 }
 
 static void desc_list_dump(struct dma_desc *p, int size)
 {
+#if 0
 	int i;
 
 	for (i = 0; i < size; i++, p++) {
 		pr_err("%d: desc=%08lx status=%08x st=%08x buf_addr=%08x next=%08x\n",
 			i, (unsigned long)p, p->status, p->st, p->buf_addr, p->next);
 	}
+#endif
 }
 
 static u32 emac_tx_avail(struct emac_priv *priv)
@@ -286,6 +290,7 @@ static int emac_rx(struct emac_priv *priv, int limit)
 	while (count < limit) {
 		p = rx_q->dma_rx + entry;
 		status = p->status;
+
 		/* check if managed by the DMA */
 		if (status & BIT(31))
 			break;
@@ -381,7 +386,8 @@ static int emac_net_init(struct platform_device *pdev)
 	priv->dev = dev;
 	priv->emac_irq = emac_irq;
 	priv->emac_base_addr = emac_base_addr;
-	(&priv->rx_q)->priv = priv;
+	//(&priv->rx_q)->priv = priv;
+	priv->rx_q.priv = priv;
 	(&priv->tx_q)->priv = priv;
 
 	ndev->netdev_ops = &emac_netdev_ops;
@@ -606,6 +612,8 @@ static int emac_start(struct net_device *ndev)
 	u8 addr[6];
 	struct emac_priv *priv = netdev_priv(ndev);
 	struct device *dev = priv->dev;
+	const char *duplex_str;
+	const char *speed_str;
 
 	/* Allocate RX and TX queues */
 	emac_rx_queue_init(ndev);
@@ -630,41 +638,32 @@ static int emac_start(struct net_device *ndev)
 		return -EINVAL;
 	}
 
-	/* Check link status */
-	for (i = 500, v = 0; (i) && !v; i--) {
-		v = phy_get_link_state();
-		if (v < 0) {
-			dev_err(dev, "link error %d", v);
-			return -EFAULT;
+	ret = phy_adjust_link(&speed, &duplex);
+	if (ret < 0) {
+		dev_info(dev, "Can't do auto-negotiation\n");
+		ctrl = phy_read(PHY_ADDR, MII_BMCR);
+		dev_info(dev, "BMCR=%08x\n", ctrl);
+		if (ctrl & BMCR_FULLDPLX) {
+			dev_info(dev, "full duplex\n");
+			duplex = FULL_DUPLEX;
+		} else {
+			dev_info(dev, "half duplex\n");
 		}
-		msleep(50);
-	}
-	if (v == 0) {
-		dev_err(dev, "link timeout\n");
-		return -ETIMEDOUT;
-	}
+		if (ctrl & BMCR_SPEED100)
+			speed = SPEED100;
+	} 
 
-	/* TODO */
-	ctrl = phy_read(PHY_ADDR, MII_BMCR);
-	ctrl = phy_read(PHY_ADDR, MII_BMCR);
-	dev_info(dev, "BMCR=%08x\n", ctrl);
+	duplex_str = (duplex == FULL_DUPLEX) ? "full" : "half";
+	speed_str = (speed == SPEED100) ? "100Mb/s" : "10Mb/s";
 
-	if (ctrl & BMCR_FULLDPLX) {
-		dev_info(dev, "full duplex\n");
-		duplex = FULL_DUPLEX;
-	} else {
-		dev_info(dev, "half duplex\n");
-	}
-
-	if (ctrl & BMCR_SPEED100)
-		speed = SPEED100;
+	dev_info(dev, "duplex %s, speed %s\n", duplex_str, speed_str);
 
 	v = (speed << 2) | duplex;
-	//v = 0xd;
 	writel(v, emac_base_addr + EMAC_CTL0);
 	v = readl(emac_base_addr + EMAC_CTL0);
-	dev_info(dev, "basic control register %08x\n", v);
+	dev_info(dev, "EMAC_CTL0=%08x\n", v);
 
+	/* Read frame control status */
 	v = readl(emac_base_addr + 0x1C);
 	pr_err("Frame control: v=%08x\n", v);
 

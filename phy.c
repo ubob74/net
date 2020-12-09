@@ -8,7 +8,7 @@
 
 int phy_setup(void)
 {
-	volatile u32 val;
+	u32 val;
 
 	/* Set clock gating for EPHY - bit 0 in Bus Clock Gating Reg4, offset 0x70 */
 	val = readl(ccu_base_addr + CLK_GATING_REG4);
@@ -59,6 +59,7 @@ int phy_read(int phy_addr, int phy_reg)
 
 	val |= (phy_addr << MII_PHY_ADDR_SHIFT );
 	val |= (phy_reg << MII_PHY_REG_ADDR_SHIFT);
+	val |= (3 << 20);
 
 	err = readl_poll_timeout(emac_base_addr + MII_CMD, v,
 		!(v & MII_BUSY), 100, 100000);
@@ -85,6 +86,7 @@ int phy_write(int phy_addr, int phy_reg, u16 data)
 
 	val |= (phy_addr << MII_PHY_ADDR_SHIFT);
 	val |= (phy_reg << MII_PHY_REG_ADDR_SHIFT) | MII_WRITE;
+	val |= (3 << 20);
 
 	/* Wait until any existing MII operation is complete */
 	if (readl_poll_timeout(emac_base_addr + MII_CMD, v,
@@ -147,9 +149,9 @@ static int phy_reset(void)
 	return 0;
 }
 
-int phy_get_link_state(void)
+static int phy_get_link_state(void)
 {
-	volatile int status;
+	int status;
 
 	/* Do a fake read */
 	status = phy_read(PHY_ADDR, MII_BMSR);
@@ -167,7 +169,7 @@ int phy_get_link_state(void)
 
 int phy_start(void)
 {
-	int ret;
+	int i, v, ret;
 
 	ret = phy_reset();
 	if (ret)
@@ -175,7 +177,87 @@ int phy_start(void)
 
 	phy_scan();
 
+	/* Check link status */
+	for (i = 500, v = 0; (i) && !v; i--) {
+		v = phy_get_link_state();
+		if (v < 0) {
+			dev_err(&pdev->dev, "link error %d", v);
+			return -EFAULT;
+		}
+		msleep(50);
+	}
+	if (v == 0) {
+		dev_err(&pdev->dev, "link timeout\n");
+		return -ETIMEDOUT;
+	}
+
 	return 0;
+}
+
+static void phy_aneg_complete(int *speed, int *duplex, int status)
+{
+	int lpa;
+
+	lpa = phy_read(PHY_ADDR, MII_LPA);
+	dev_info(&pdev->dev, "%s: auto-neg complete, lpa=%x\n", __func__, lpa);
+
+	*speed = SPEED10;
+	*duplex = HALF_DUPLEX;
+
+	if ((status & BMSR_100FULL) && (lpa & LPA_100FULL)) {
+		*speed = SPEED100;
+		*duplex = FULL_DUPLEX;
+		return;
+	}
+
+	if ((status & BMSR_100HALF) && (lpa & LPA_100HALF)) {
+		*speed = SPEED100;
+		*duplex = HALF_DUPLEX;
+		return;
+	}
+
+	if ((status & BMSR_10FULL) && (lpa & LPA_10FULL)) {
+		*speed = SPEED10;
+		*duplex = FULL_DUPLEX;
+	}
+}
+
+int phy_adjust_link(int *speed, int *duplex)
+{
+	int i;
+	int status;
+	int adv;
+
+	status = phy_read(PHY_ADDR, MII_BMSR);
+	adv = phy_read(PHY_ADDR, MII_ADVERTISE);
+	dev_info(&pdev->dev, "%s: status=%x advertise=%x\n", __func__, status, adv);
+
+	/* Cleanup advertise */
+	adv &= ~ADVERTISE_ALL;
+
+	if (status & BMSR_100FULL)
+		adv |= ADVERTISE_100FULL;
+	if (status & BMSR_100HALF)
+		adv |= ADVERTISE_100HALF;
+	if (status & BMSR_10FULL)
+		adv |= ADVERTISE_10FULL;
+	if (status & BMSR_10HALF)
+		adv |= ADVERTISE_10HALF;
+
+	phy_write(PHY_ADDR, MII_ADVERTISE, adv);
+	adv = phy_read(PHY_ADDR, MII_ADVERTISE);
+	dev_info(&pdev->dev, "%s: advertise=%x\n", __func__, adv);
+
+	phy_write(PHY_ADDR, MII_BMCR, BMCR_ANRESTART | BMCR_ANENABLE);
+	for (i = 0; i < 100; i++, msleep(50)) {
+		status = phy_read(PHY_ADDR, MII_BMSR);
+		if (status & BMSR_ANEGCOMPLETE) {
+			phy_aneg_complete(speed, duplex, status);
+			return 0;
+		}
+	}
+	dev_err(&pdev->dev, "%s: auto-neg error\n", __func__);
+	return -1;
 }
 
 int phy_stop(void)

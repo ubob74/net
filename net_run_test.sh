@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MODULE_NAME=net-test
+MODULE_NAME=net
 FILE=$MODULE_NAME.ko
 
 FILES="$FILE"

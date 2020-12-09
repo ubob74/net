@@ -15,8 +15,8 @@ int phy_setup(void);
 void phy_release(void);
 int phy_read(int phy_addr, int phy_reg);
 int phy_write(int phy_addr, int phy_reg, u16 data);
-int phy_get_link_state(void);
 int phy_start(void);
 int phy_stop(void);
+int phy_adjust_link(int *, int *);
 
 #endif
