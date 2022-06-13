@@ -212,7 +212,7 @@ static void emac_tx_clean(struct emac_priv *priv)
 
 	if (netif_tx_queue_stopped(netdev_get_tx_queue(priv->ndev, 0)) &&
 			(emac_tx_avail(priv) > 1)) {
-		pr_err("%s: restarting queue\n", __func__);
+		dev_dbg(priv->dev, "%s: restarting queue\n", __func__);
 		netif_tx_wake_queue(netdev_get_tx_queue(priv->ndev, 0));
 	} 
 }
@@ -231,7 +231,7 @@ static netdev_tx_t emac_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	tx_q = &priv->tx_q;
 
-	dev_info(priv->dev, "%s: enter, queue=%u nfrags=%d len=%u\n", __func__, queue, nfrags, len);
+	dev_dbg(priv->dev, "%s: enter, queue=%u nfrags=%d len=%u\n", __func__, queue, nfrags, len);
 
 	dump_skb(skb, "Data to transmit:");
 
@@ -324,13 +324,14 @@ static int emac_rx(struct emac_priv *priv, int limit)
 		next_entry = rx_q->cur_rx;
 
 		entry = next_entry;
+		p->status |= BIT(31);
 	}
-
+/*
 	for (i = 0; i < RX_SIZE; i++) {
 		p = rx_q->dma_rx + i;
 		p->status |= BIT(31);
 	}
-
+*/
 	return count;
 }
 
@@ -588,7 +589,7 @@ static irqreturn_t emac_interrupt(int irq, void *dev_id)
 
 	status = readl(emac_base_addr + EMAC_INT_STA);
 	writel(status, emac_base_addr + EMAC_INT_STA);
-	dev_info(dev, "Int status=%08x\n", status);
+	dev_dbg(dev, "Int status=%08x\n", status);
 
 	if (status & EMAC_RX_INT) {
 		dump_skb(rx_q->sk_buff[0], "Received data:");
@@ -608,7 +609,7 @@ static irqreturn_t emac_interrupt(int irq, void *dev_id)
 static int emac_start(struct net_device *ndev)
 {
 	int ctrl = 0;
-	int i, v, ret;
+	int v, ret;
 	u8 addr[6];
 	struct emac_priv *priv = netdev_priv(ndev);
 	struct device *dev = priv->dev;
@@ -719,7 +720,7 @@ static int emac_release(struct platform_device *pdev)
 	return 0;
 }
 
-static int net_test_probe(struct platform_device *_pdev)
+static int net_probe(struct platform_device *_pdev)
 {
 	int ret;
 
@@ -756,7 +757,7 @@ static int net_test_probe(struct platform_device *_pdev)
 	return 0;
 }
 
-static int net_test_remove(struct platform_device *pdev)
+static int net_remove(struct platform_device *pdev)
 {
 	phy_stop();
 
@@ -768,20 +769,20 @@ static int net_test_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id net_test_match[] = {
+static const struct of_device_id net_match[] = {
 	{ .compatible = "allwinner,sun8i-h3-emac", },
 	{}
 };
-MODULE_DEVICE_TABLE(of, net_test_match);
+MODULE_DEVICE_TABLE(of, net_match);
 
-static struct platform_driver net_test_driver = {
-	.probe  = net_test_probe,
-	.remove = net_test_remove,
+static struct platform_driver net_driver = {
+	.probe  = net_probe,
+	.remove = net_remove,
 	.driver = {
-		.name       = "net-test",
-		.of_match_table = net_test_match,
+		.name       = "net",
+		.of_match_table = net_match,
 	},
 };
-module_platform_driver(net_test_driver);
+module_platform_driver(net_driver);
 
 MODULE_LICENSE("GPL");
