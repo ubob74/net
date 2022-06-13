@@ -8,7 +8,7 @@
 
 int phy_setup(void)
 {
-	u32 val;
+	volatile u32 val;
 
 	/* Set clock gating for EPHY - bit 0 in Bus Clock Gating Reg4, offset 0x70 */
 	val = readl(ccu_base_addr + CLK_GATING_REG4);
@@ -181,13 +181,13 @@ int phy_start(void)
 	for (i = 500, v = 0; (i) && !v; i--) {
 		v = phy_get_link_state();
 		if (v < 0) {
-			dev_err(&pdev->dev, "link error %d", v);
+			//dev_err(dev, "link error %d", v);
 			return -EFAULT;
 		}
 		msleep(50);
 	}
 	if (v == 0) {
-		dev_err(&pdev->dev, "link timeout\n");
+		//dev_err(dev, "link timeout\n");
 		return -ETIMEDOUT;
 	}
 
@@ -199,7 +199,7 @@ static void phy_aneg_complete(int *speed, int *duplex, int status)
 	int lpa;
 
 	lpa = phy_read(PHY_ADDR, MII_LPA);
-	dev_info(&pdev->dev, "%s: auto-neg complete, lpa=%x\n", __func__, lpa);
+	pr_info("%s: auto-neg complete, lpa=%x\n", __func__, lpa);
 
 	*speed = SPEED10;
 	*duplex = HALF_DUPLEX;
@@ -230,7 +230,7 @@ int phy_adjust_link(int *speed, int *duplex)
 
 	status = phy_read(PHY_ADDR, MII_BMSR);
 	adv = phy_read(PHY_ADDR, MII_ADVERTISE);
-	dev_info(&pdev->dev, "%s: status=%x advertise=%x\n", __func__, status, adv);
+	pr_info("%s: status=%x advertise=%x\n", __func__, status, adv);
 
 	/* Cleanup advertise */
 	adv &= ~ADVERTISE_ALL;
@@ -246,7 +246,7 @@ int phy_adjust_link(int *speed, int *duplex)
 
 	phy_write(PHY_ADDR, MII_ADVERTISE, adv);
 	adv = phy_read(PHY_ADDR, MII_ADVERTISE);
-	dev_info(&pdev->dev, "%s: advertise=%x\n", __func__, adv);
+	pr_info("%s: advertise=%x\n", __func__, adv);
 
 	phy_write(PHY_ADDR, MII_BMCR, BMCR_ANRESTART | BMCR_ANENABLE);
 	for (i = 0; i < 100; i++, msleep(50)) {
@@ -256,7 +256,7 @@ int phy_adjust_link(int *speed, int *duplex)
 			return 0;
 		}
 	}
-	dev_err(&pdev->dev, "%s: auto-neg error\n", __func__);
+	pr_err("%s: auto-neg error\n", __func__);
 	return -1;
 }
 

@@ -23,6 +23,9 @@ struct platform_device;
 #define SYSCON_EMAC_CLK_REG		0x30
 
 /* EMAC */
+#define EMAC_BASE_ADDR			0x01C30000
+#define EMAC_SIZE				0x10000
+
 #define EMAC_CTL0				0x00
 #define EMAC_CTL1				0x04
 #define EMAC_INT_STA			0x08
