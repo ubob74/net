@@ -25,6 +25,7 @@ int phy_setup(void)
 	val |= BIT(EPHY_RST);
 	writel(val, ccu_base_addr + SW_RST_REG2);
 
+#if 0
 	mdelay(100);
 
 	val = readl(syscon + SYSCON_EMAC_CLK_REG);
@@ -43,6 +44,7 @@ int phy_setup(void)
 	dev_info(&pdev->dev, "syscon val=%x\n", val);
 
 	writel(val, syscon + SYSCON_EMAC_CLK_REG);
+#endif
 
 	return 0;
 }

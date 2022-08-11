@@ -141,6 +141,23 @@ static int emac_hw_setup(void)
 	val |= BIT(EMAC_RST);
 	writel(val, ccu_base_addr + SW_RST_REG0);
 
+	val = readl(syscon + SYSCON_EMAC_CLK_REG);
+	dev_info(&pdev->dev, "syscon=%lx val=%x\n", (unsigned long)syscon, val);
+
+	/* Setup PHY address */
+	val |= (PHY_ADDR & 0x1F) << 20;
+
+	/* Select internal PHY */
+	val |= BIT(15);
+
+	/* Power up PHY */
+	if (val & BIT(16))
+		val &= ~BIT(16);
+
+	dev_info(&pdev->dev, "syscon val=%x\n", val);
+
+	writel(val, syscon + SYSCON_EMAC_CLK_REG);
+
 	return 0;
 }
 
