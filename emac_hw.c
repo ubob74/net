@@ -10,7 +10,7 @@ void emac_set_rx_filter(void)
 	u32 v = readl(emac_base_addr + EMAC_RX_FRM_FLT);
 	/* Receive all frames */
 #endif
-	u32 v = 1;
+	u32 v = 0;
 	writel(v, emac_base_addr + EMAC_RX_FRM_FLT);
 }
 
@@ -101,12 +101,12 @@ void emac_set_dma_desc_tx_list(unsigned long addr)
 	writel(addr, emac_base_addr + EMAC_TX_DMA_LIST);
 }
 
-void emac_set_mac_addr(u8 *addr)
+void emac_set_mac_addr(const u8 *addr)
 {
 	u32 data;
 
 	data = (addr[5] << 8) | addr[4];
-	//data |= BIT(31);
+	data |= BIT(31);
 	writel(data, emac_base_addr + EMAC_ADDR_HIGH);
 
 	data = (addr[3] << 24) | (addr[2] << 16) | (addr[1] << 8) | addr[0];

@@ -1,0 +1,26 @@
+From cf5aa8cd3feb47344d6fc150552d75f052d816bb Mon Sep 17 00:00:00 2001
+From: <ubob74@gmail.com>
+Date: Mon, 22 Jun 2026 17:13:02 +0300
+Subject: [PATCH] Orange Pi Zero DTS fix
+
+
+diff --git a/arch/arm/boot/dts/allwinner/sunxi-h3-h5.dtsi b/arch/arm/boot/dts/allwinner/sunxi-h3-h5.dtsi
+index 7df6051..5f3b84b 100644
+--- a/arch/arm/boot/dts/allwinner/sunxi-h3-h5.dtsi
++++ b/arch/arm/boot/dts/allwinner/sunxi-h3-h5.dtsi
+@@ -538,6 +538,12 @@ emac: ethernet@1c30000 {
+ 			clock-names = "stmmaceth";
+ 			status = "disabled";
+ 
++			mii-phy {
++				compatible = "allwinner,sun8i-h3-mdio-mux";
++				clocks = <&ccu CLK_BUS_EPHY>;
++				resets = <&ccu RST_BUS_EPHY>;
++			};
++
+ 			mdio: mdio {
+ 				#address-cells = <1>;
+ 				#size-cells = <0>;
+-- 
+2.39.5
+

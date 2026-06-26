@@ -15,7 +15,7 @@ void emac_stop_tx(void);
 void emac_hw_init(void);
 void emac_set_dma_desc_tx_list(unsigned long);
 void emac_set_dma_desc_rx_list(unsigned long);
-void emac_set_mac_addr(u8 *addr);
+void emac_set_mac_addr(const u8 *addr);
 void emac_get_mac_addr(u8 *addr);
 void emac_set_tx_operation_mode(void);
 void emac_set_rx_operation_mode(void);

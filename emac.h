@@ -20,12 +20,9 @@ struct platform_device;
 /* SYSCON */
 #define SYSCON_BASE_ADDR		0x01C00000
 #define SYSCON_SIZE				0x1000
-#define SYSCON_EMAC_CLK_REG		0x30
+#define SYSCON_EMAC_EPHY_CLK_REG	0x30
 
 /* EMAC */
-#define EMAC_BASE_ADDR			0x01C30000
-#define EMAC_SIZE				0x10000
-
 #define EMAC_CTL0				0x00
 #define EMAC_CTL1				0x04
 #define EMAC_INT_STA			0x08
@@ -56,6 +53,8 @@ struct platform_device;
 #define MII_PHY_REG_ADDR_SHIFT	4
 #define MII_BUSY				BIT(0)
 #define MII_WRITE				BIT(1)
+
+#define MII_DATA_MASK GENMASK(15, 0)
 
 #define FRAME_LEN_MASK			GENMASK(29, 16)
 #define FRAME_LEN_SHIFT			16
